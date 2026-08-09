@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Real-time browser extension that scores the current page for phishing/scam signals.",
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "node build.mjs",
     "test": "vitest run",

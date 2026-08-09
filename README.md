@@ -109,7 +109,7 @@ Includes an integration test (`tests/demoPages.test.ts`) that runs the real extr
 scoring pipeline against the actual `demo/*.html` files via jsdom — not just hand-built
 fixtures — so the detectors are verified against real DOM parsing, not only their own
 synthetic inputs. CI runs typecheck + lint + tests + coverage + the benchmark + the
-production build across Node 18/20/22 on every push and PR.
+production build across Node 20/22/24 on every push and PR.
 
 ## Project layout
 
