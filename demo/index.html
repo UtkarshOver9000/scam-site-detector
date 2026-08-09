@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Scam Site Detector — Test Pages</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #0f172a; color: #f1f5f9; max-width: 640px; margin: 60px auto; padding: 0 20px; }
+  h1 { font-size: 22px; }
+  .card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 18px 20px; margin: 16px 0; }
+  a { color: #60a5fa; font-weight: 600; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; margin-left: 8px; }
+  .tag-low { background: rgba(16,185,129,0.15); color: #10b981; }
+  .tag-medium { background: rgba(245,158,11,0.15); color: #f59e0b; }
+  .tag-critical { background: rgba(239,68,68,0.15); color: #ef4444; }
+</style>
+</head>
+<body>
+  <h1>🛡️ Scam Site Detector — Test Pages</h1>
+  <p>Deliberately constructed pages for testing the extension. No data is collected anywhere here.</p>
+
+  <div class="card">
+    <a href="benign.html">Benign page</a><span class="tag tag-low">expect LOW</span>
+    <p>An ordinary page with a same-origin form and no suspicious language.</p>
+  </div>
+
+  <div class="card">
+    <a href="borderline.html">Borderline page</a><span class="tag tag-medium">expect MEDIUM</span>
+    <p>Mild urgency language only, nothing else suspicious.</p>
+  </div>
+
+  <div class="card">
+    <a href="suspicious-form.html">Suspicious form page</a><span class="tag tag-critical">expect CRITICAL</span>
+    <p>Urgency language + a password field that submits to a different origin than the page itself.</p>
+  </div>
+
+  <p style="color:#64748b;font-size:13px;margin-top:32px;">
+    Domain-lookalike detection (e.g. "paypa1.com") can't be demonstrated live here since it
+    requires actually owning a typosquatted domain — see the repo's synthetic benchmark and
+    unit tests for verified coverage of that detector instead.
+  </p>
+</body>
+</html>
