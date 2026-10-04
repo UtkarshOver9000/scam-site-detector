@@ -2,144 +2,148 @@
 
 ![CI](https://github.com/UtkarshOver9000/scam-site-detector/actions/workflows/ci.yml/badge.svg)
 
-A browser extension that scores the page you're actually on for phishing/scam signals in
-real time — lookalike domains, forms that collect a password but submit somewhere else,
-urgency/pressure language — and shows a risk tier in the toolbar badge and popup. No
-server, no external API calls, everything runs locally in the browser.
+A Chrome/Edge extension that scores the page you're on for phishing signals and shows a
+risk tier in the toolbar badge and popup. It looks for:
+- lookalike domains (`paypa1.com`),
+- brand names inside unrelated domains,
+- password forms that submit to another site,
+- passwords collected over plain HTTP,
+- urgency language.
 
-## Why this, not a blocklist
+Everything runs locally; no page data leaves the browser.
 
-Most "phishing detector" demos just check a domain against a static blocklist, which only
-catches sites someone already reported. This scores live page *behavior* instead:
-- Does a password field submit to a different origin than the page itself?
-- Is the domain one or two characters off from a well-known brand (`paypa1.com`)?
-- Does the hostname stuff a brand name into a subdomain it doesn't own
-  (`paypal-secure-login.verification-portal.net`)?
-- Does the page use urgency/pressure language ("verify your account now", "account will be suspended")?
+This README reports how well those rules actually work, measured on **real phishing
+data**: 235,795 pages from the PhiUSIIL dataset, the live OpenPhish feed, and the
+1,000,000-domain Tranco list. The short version: the rules almost never raise false
+alarms, but they **miss most real phishing**.
 
-None of that requires the site to already be on anyone's list.
+## Results on real data
 
-## How it's scored
+`npm run eval` (`src/eval/realEval.ts`, results in `reports/real_eval.json`):
 
-Four independent detectors each contribute weighted findings; scores combine into a
-0–100 risk score and a `LOW` / `MEDIUM` / `HIGH` / `CRITICAL` tier:
+### PhiUSIIL: 235,795 real pages (100,945 phishing, 134,850 legitimate)
 
-| Signal | Weight | Standalone tier |
+Each page is turned into the signals the extension would extract:
+- hostname and origin from the URL,
+- HTTPS from the crawled `IsHTTPS` flag,
+- a password form from `HasPasswordField`, which submits cross-origin when
+  `HasExternalFormSubmit` is set.
+
+| Flag pages scoring ... | Accuracy | Precision | Recall | F1 | False-positive rate |
+|---|---|---|---|---|---|
+| ≥ 45 (HIGH or CRITICAL) | 56.99% | 44.89% | **2.04%** | 0.0390 | 1.88% |
+| ≥ 20 (MEDIUM or above) | 57.48% | 55.92% | 3.18% | 0.0601 | 1.88% |
+
+ROC-AUC of the 0-100 risk score: **0.5064**, close to random. At the HIGH threshold:
+2,060 phishing pages caught, 98,885 missed, 2,529 legitimate pages flagged.
+
+**What each detector does on real pages:**
+
+| Detector | Fires on phishing pages | Fires on legitimate pages | Precision when it fires |
+|---|---|---|---|
+| Brand name in an unrelated domain | 1.73% | 0.10% | 92.88% |
+| Password over plain HTTP | 1.36% | 0.00% | 100.00%* |
+| Password form posts to another site | 0.28% | 1.67% | 11.21% |
+| Lookalike typo of a known brand | 0.03% | 0.11% | 18.64% |
+
+\*Every legitimate PhiUSIIL page is HTTPS (a known property of the dataset), so this
+detector can't produce a false alarm here. On the open web it could.
+
+What this means:
+- The two domain-name detectors are precise but rare. Only about 2% of real phishing
+  pages imitate one of the 20 listed brands in their domain.
+- Cross-origin password forms turn out to be **more common on legitimate sites** (single
+  sign-on, embedded login widgets) than on phishing pages. That detector does more harm
+  than good on this data.
+- The urgency detector can't be measured fairly: PhiUSIIL has no page text, only titles.
+
+### Live phishing (OpenPhish feed, 300 URLs fetched 2026-10-04 04:29 UTC)
+
+Only the URL is used (nothing is fetched or visited), so only the domain detectors can
+fire: **32 of 300 caught (10.67%)**.
+
+### False alarms on real popular sites (Tranco top-1M, list Y83KG)
+
+The domain detectors flag **2,667 of 1,000,000** domains (0.27%). In the top 1,000 they
+flag the brands' own infrastructure, for example `amazonaws.com`, `googleapis.com`,
+`microsoftonline.com`, `cdninstagram.com` and `discord.gg`, because the brand-name rule
+can't tell a brand's secondary domains from impostors.
+
+### Takeaway
+
+Hand-written rules give near-zero false alarms but very low recall. A data-trained model
+does much better on the same kind of data. The companion project
+[phishing URL detection](https://github.com/UtkarshOver9000/phishvpn-detection) catches
+63.24% of live OpenPhish domains at a 0.09% false-alarm rate on Tranco, using the domain
+only. Porting that model into this extension is the natural next step.
+
+## How the score is built
+
+Four independent detectors add weighted findings into a 0-100 score and a
+`LOW` / `MEDIUM` / `HIGH` / `CRITICAL` tier:
+
+| Signal | Weight | Alone reaches |
 |---|---|---|
-| Domain typo of a known brand (Levenshtein ≤2) | 45 | HIGH |
-| Brand name stuffed into an unrelated subdomain | 45 | HIGH |
-| Password field submitting cross-origin | 45 | HIGH |
+| Domain within 2 edits of a known brand domain | 45 | HIGH |
+| Brand name inside a domain the brand doesn't own | 45 | HIGH |
+| Password form submitting to another origin | 45 | HIGH |
 | Password collected over plain HTTP | 30 | MEDIUM |
-| Urgency/pressure language | up to 25 | MEDIUM |
+| Urgency/pressure phrases | up to 25 | MEDIUM |
 
-Structural/URL-based signals (domain, form action) are weighted to stand alone as strong
-evidence, since those patterns essentially never occur on legitimate sites. Content-based
-signals (urgency language) are weighted as supporting evidence only, since some legitimate
-sites use similar phrasing for real security notices — a single urgency phrase alone
-shouldn't flag a page as CRITICAL.
+Registrable domains come from the Public Suffix List (via `tldts`). So `login.bbc.co.uk`
+counts as `bbc.co.uk`, and `x.pages.dev` counts as its own site.
 
-## Real benchmark, not a claim
+## Data
 
-`src/detection/syntheticEval.ts` generates 300 labeled synthetic page scenarios (benign +
-five phishing strategies, from single-weak-signal to fully-stacked) and measures precision/recall
-against them:
+| Dataset | Use | License / terms |
+|---|---|---|
+| [PhiUSIIL Phishing URL Dataset](https://archive.ics.uci.edu/dataset/967/phiusiil+phishing+url+dataset), UCI #967 (CSV SHA-256 `a236549c…d06d1c6`) | page-level evaluation | CC BY 4.0 |
+| [OpenPhish community feed](https://openphish.com/feed.txt) (SHA-256 `15ce676d…511a41`) | live evaluation | non-commercial research only; not redistributed |
+| [Tranco top-1M](https://tranco-list.eu/list/Y83KG/1000000), list Y83KG (CSV SHA-256 `8862c140…37af1d7`) | false-alarm evaluation | see Tranco site |
+
+To reproduce (data goes in `data/`, which is gitignored):
 
 ```bash
-npm run benchmark
+curl -L -o phiusiil.zip "https://archive.ics.uci.edu/static/public/967/phiusiil+phishing+url+dataset.zip"
+curl -L -o tranco.zip https://tranco-list.eu/download/daily/top-1m.csv.zip
+curl -L -o data/openphish-feed.txt https://openphish.com/feed.txt
+unzip phiusiil.zip -d data && unzip tranco.zip -d data
+npm run eval
 ```
 
-| Metric | Score |
-|---|---|
-| Precision | 100% |
-| Recall | 74% |
-| F1 | 0.851 |
-| False positive rate | 0% |
-
-**0% false positive rate is the important number for a tool like this** — it never flags a
-benign page in this benchmark. The 74% recall is honest, not maximized: some phishing
-scenarios deliberately use only one weak signal (e.g. urgency language alone), and the
-scorer correctly declines to escalate those to a hard flag rather than risk crying wolf.
-
-## Real bugs found while building this
-
-- **`instanceof HTMLInputElement` failed outside a real browser realm.** Element extraction
-  crashed in any DOM implementation where that global constructor isn't populated the same
-  way (e.g. testing environments). Switched to a `tagName === "INPUT"` check, which works
-  identically everywhere.
-- **`.innerText` is layout-dependent and unreliable outside a real rendering engine** — it
-  silently returned empty text in the test environment, which would have shipped a content
-  detector that only worked by accident. Switched to `.textContent` (with `<script>`/`<style>`
-  stripped from a clone first), which is also arguably *more* correct: it still catches
-  urgency text an attacker hid via CSS tricks that `innerText` would have skipped.
-- **The OTP-field regex's trailing `\b` failed on realistic field names** like `otp_code` —
-  `_` counts as a word character, so there's no boundary between "otp" and "_". Fixed by
-  dropping the trailing boundary.
-
-## Install it locally
+## Install the extension
 
 ```bash
 npm install
 npm run build
 ```
 
-Then in Chrome/Edge: `chrome://extensions` → enable **Developer mode** → **Load unpacked**
-→ select this repo's root folder (the one containing `manifest.json`).
+In Chrome or Edge, open `chrome://extensions`, turn on **Developer mode**, click **Load
+unpacked**, and select this folder (the one with `manifest.json`).
 
-## Test pages
-
-`demo/` has three pages for manually exercising the extension after loading it: a benign
-page (expect LOW), a borderline page with urgency language only (expect MEDIUM), and a
-page with a password form submitting cross-origin plus urgency language (expect CRITICAL).
-Open them with `npx serve demo` or any static file server.
-
-Domain-lookalike detection can't be demonstrated on a live page here since it requires
-actually owning a typosquatted domain — see the synthetic benchmark and
-`tests/domainAnalysis.test.ts` for verified coverage of that detector instead.
+`demo/` has three pages for checking it by hand: benign (expect LOW), urgency text only
+(expect MEDIUM), and a cross-origin password form with urgency text (expect CRITICAL).
+Serve them with `npx serve demo`.
 
 ## Tests
 
 ```bash
-npm test              # 37 tests
-npm run test:coverage # 97.6% statements
-npm run typecheck
-npm run lint
+npm test               # 39 tests
+npm run test:coverage  # 100% statements in src/detection
+npm run typecheck && npm run lint
 ```
 
-Includes an integration test (`tests/demoPages.test.ts`) that runs the real extraction +
-scoring pipeline against the actual `demo/*.html` files via jsdom — not just hand-built
-fixtures — so the detectors are verified against real DOM parsing, not only their own
-synthetic inputs. CI runs typecheck + lint + tests + coverage + the benchmark + the
-production build across Node 20/22/24 on every push and PR.
+The tests cover every detector, the scorer, CSV parsing, and the metric maths (checked
+against hand-computed values). `tests/demoPages.test.ts` also runs the real extraction
+and scoring pipeline on the `demo/` pages through jsdom. CI runs typecheck, lint, tests
+and the build on Node 20, 22 and 24.
 
-## Project layout
+## Limitations
 
-```
-src/
-  detection/          pure, framework-free detection logic (fully unit-tested)
-    domainAnalysis.ts   Levenshtein-based lookalike domain detection
-    formAnalysis.ts      sensitive-field classification + cross-origin form detection
-    contentAnalysis.ts    urgency-language detection
-    transportAnalysis.ts   insecure (HTTP) password collection
-    scorer.ts             combines all findings into a score + tier
-    syntheticEval.ts        labeled benchmark generator
-  content/            thin browser-API-coupled layer: extracts PageSignals from the live DOM
-  background/         service worker: badge updates, per-tab score storage
-  popup/               toolbar popup UI
-demo/                 test pages for manual verification after loading the extension
-```
-
-## Limitations & honest notes
-
-- **Known-brand list is small and curated** (~20 entries), not an exhaustive database —
-  see `knownBrands.ts`. Real deployment would need a much larger, maintained list.
-- **Registrable-domain extraction is naive** (last two labels of the hostname) and doesn't
-  correctly handle multi-part public suffixes like `.co.uk`. A production version would use
-  the Public Suffix List.
-- **Not published to the Chrome Web Store** — install via `Load unpacked` for now. Store
-  review/publishing is a separate step this repo doesn't cover.
-- **No live web-app demo** (unlike this author's other repos) — a browser extension's
-  "demo" is running it against real pages, which only makes sense installed locally; see
-  the Install and Test pages sections above instead of a hosted URL.
+- The brand list has 20 entries. Most phishing targets something else.
+- The PhiUSIIL mapping is approximate. "Has an external form submit" is page-level, so a
+  page with a same-site login form and an unrelated external form counts as a mismatch.
+- Not published to the Chrome Web Store; install it unpacked.
 
 ## License
 

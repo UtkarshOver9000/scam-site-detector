@@ -1,4 +1,5 @@
 import { Finding } from "./types";
+import { getDomain } from "tldts";
 import { KNOWN_BRANDS, KnownBrand } from "./knownBrands";
 
 export function levenshteinDistance(a: string, b: string): number {
@@ -20,14 +21,12 @@ export function levenshteinDistance(a: string, b: string): number {
   return dp[m][n];
 }
 
-// Naive "last two labels" registrable-domain extraction. Doesn't handle
-// multi-part public suffixes (e.g. "co.uk") correctly -- a real production
-// system would use the Public Suffix List. Documented limitation, not a
-// silent one; see README.
+// Registrable domain via the Public Suffix List (bundled in `tldts`), so
+// "login.bbc.co.uk" -> "bbc.co.uk" and hosting-platform subdomains such as
+// "x.pages.dev" count as their own registrable domain.
 export function getRegistrableDomain(hostname: string): string {
-  const parts = hostname.split(".").filter(Boolean);
-  if (parts.length <= 2) return hostname.toLowerCase();
-  return parts.slice(-2).join(".").toLowerCase();
+  const host = hostname.toLowerCase().replace(/\.$/, "");
+  return getDomain(host, { allowPrivateDomains: true }) ?? host;
 }
 
 export function analyzeDomain(hostname: string, brands: KnownBrand[] = KNOWN_BRANDS): Finding[] {

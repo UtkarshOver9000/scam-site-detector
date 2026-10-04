@@ -1,0 +1,165 @@
+{
+  "data": {
+    "phiusiil": {
+      "file": "data/PhiUSIIL_Phishing_URL_Dataset.csv",
+      "sha256": "a236549cd369cd80bd478ff8e1779cbf44c58d5c3f79f7a51a1adbed7d06d1c6",
+      "pages": 235795,
+      "phishing": 100945,
+      "legitimate": 134850
+    },
+    "openphish": {
+      "file": "data/openphish-feed.txt",
+      "sha256": "15ce676d5e2b2ad96cc040b0ea00b6cfb47ffd90f80571f5b23ff9601b511a41",
+      "urls": 300
+    },
+    "tranco": {
+      "file": "data/top-1m.csv",
+      "sha256": "8862c140cf1186215f4eda3acc98dd50d79b79e95015bbdede108a79937af1d7",
+      "domains": 1000000
+    }
+  },
+  "phiusiil_full_scorer": {
+    "roc_auc_of_score": 0.5064,
+    "at_score_45_high": {
+      "confusion_matrix": {
+        "tp": 2060,
+        "fp": 2529,
+        "tn": 132321,
+        "fn": 98885
+      },
+      "accuracy": 0.5699,
+      "precision": 0.4489,
+      "recall": 0.0204,
+      "f1": 0.039,
+      "false_positive_rate": 0.0188
+    },
+    "at_score_20_medium": {
+      "confusion_matrix": {
+        "tp": 3208,
+        "fp": 2529,
+        "tn": 132321,
+        "fn": 97737
+      },
+      "accuracy": 0.5748,
+      "precision": 0.5592,
+      "recall": 0.0318,
+      "f1": 0.0601,
+      "false_positive_rate": 0.0188
+    },
+    "detectors": {
+      "FORM_ACTION_MISMATCH": {
+        "fires_on_phishing_pages": 0.0028,
+        "fires_on_legitimate_pages": 0.0167,
+        "precision_when_it_fires": 0.1121
+      },
+      "BRAND_NAME_IN_SUBDOMAIN": {
+        "fires_on_phishing_pages": 0.0173,
+        "fires_on_legitimate_pages": 0.001,
+        "precision_when_it_fires": 0.9288
+      },
+      "INSECURE_TRANSPORT": {
+        "fires_on_phishing_pages": 0.0136,
+        "fires_on_legitimate_pages": 0,
+        "precision_when_it_fires": 1
+      },
+      "LOOKALIKE_DOMAIN_TYPO": {
+        "fires_on_phishing_pages": 0.0003,
+        "fires_on_legitimate_pages": 0.0011,
+        "precision_when_it_fires": 0.1864
+      }
+    }
+  },
+  "phiusiil_domain_detector_only": {
+    "roc_auc_of_score": 0.5078,
+    "flags_any_domain_finding": {
+      "confusion_matrix": {
+        "tp": 1780,
+        "fp": 278,
+        "tn": 134572,
+        "fn": 99165
+      },
+      "accuracy": 0.5783,
+      "precision": 0.8649,
+      "recall": 0.0176,
+      "f1": 0.0346,
+      "false_positive_rate": 0.0021
+    }
+  },
+  "openphish_live_domain_detector": {
+    "urls": 300,
+    "flagged": 32,
+    "recall": 0.1067
+  },
+  "tranco_domain_detector": {
+    "domains": 1000000,
+    "flagged": 2667,
+    "false_positive_rate": 0.002667,
+    "examples_flagged_in_top_1000": [
+      "amazonaws.com",
+      "googleapis.com",
+      "googlevideo.com",
+      "googletagmanager.com",
+      "apple-dns.net",
+      "googleusercontent.com",
+      "cloud.microsoft",
+      "microsoftonline.com",
+      "googledomains.com",
+      "googlesyndication.com",
+      "cdninstagram.com",
+      "amazonvideo.com",
+      "google-analytics.com",
+      "amazon.dev",
+      "amazon-adsystem.com",
+      "static.microsoft",
+      "discord.gg",
+      "webex.com",
+      "adtrafficquality.google",
+      "dns.google",
+      "steamserver.net",
+      "googleadservices.com",
+      "cdn-apple.com",
+      "media-amazon.com",
+      "googleblog.com",
+      "hp.com",
+      "facebook.net",
+      "dell.com",
+      "amazon.co.uk",
+      "amazontrust.com",
+      "amazon.de",
+      "espn.com",
+      "steamcommunity.com",
+      "google.cn",
+      "aol.com",
+      "netflix.net",
+      "amazonalexa.com",
+      "amazon.co.jp",
+      "googletagservices.com",
+      "amazon.co.za",
+      "google.de",
+      "share.google",
+      "google.com.hk",
+      "discord.media",
+      "amazon.fr",
+      "ups.com",
+      "amazon.ca",
+      "withgoogle.com",
+      "amazon.in",
+      "wps.com",
+      "googlezip.net",
+      "amazon.es",
+      "amazon.it",
+      "asus.com",
+      "safebrowsing.apple",
+      "google.co.uk",
+      "google.com.br",
+      "steamstatic.com",
+      "discordapp.com",
+      "discogs.com",
+      "amazon.com.br",
+      "amazon.com.au",
+      "chess.com",
+      "ssl-images-amazon.com",
+      "hm.com"
+    ]
+  }
+}

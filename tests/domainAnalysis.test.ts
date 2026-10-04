@@ -23,6 +23,15 @@ describe("getRegistrableDomain", () => {
   it("leaves a bare domain unchanged", () => {
     expect(getRegistrableDomain("paypal.com")).toBe("paypal.com");
   });
+
+  it("uses the Public Suffix List for multi-part suffixes", () => {
+    expect(getRegistrableDomain("login.bbc.co.uk")).toBe("bbc.co.uk");
+    expect(getRegistrableDomain("secure.sbi.co.in")).toBe("sbi.co.in");
+  });
+
+  it("treats hosting-platform subdomains as their own domain", () => {
+    expect(getRegistrableDomain("paypal-login.pages.dev")).toBe("paypal-login.pages.dev");
+  });
 });
 
 describe("analyzeDomain", () => {

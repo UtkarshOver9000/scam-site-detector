@@ -1,5 +1,5 @@
 node_modules/
 dist/
 coverage/
-*.log
-.DS_Store
+# Datasets for npm run eval are downloaded, never committed
+data/
